@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diveagar Trip 2026</title>
+<style>
+:root{--bg:#000;--card:#0d0d0d;--line:#262626;--text:#f5f5f5;--muted:#9ca3af;--yellow:#facc15;--green:#22c55e;--orange:#f97316;--blue:#3b82f6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:16px;min-height:100vh}
+h1{font-size:1.4rem;margin:0 0 4px}
+h3{margin:24px 0 8px;font-size:1.05rem}
+.sub{color:var(--muted);font-size:.9rem;margin:4px 0 16px}
+header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+button{background:#161616;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:.9rem}
+button.active{border-color:var(--text)}
+button.small{padding:4px 8px;font-size:.8rem}
+button:disabled{opacity:.4;cursor:default}
+.badge{font-size:.8rem;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+.card .label{color:var(--muted);font-size:.8rem}
+.card .val{font-size:1.2rem;font-weight:600;margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{color:var(--muted);font-weight:500}
+.y{color:var(--yellow)}.g{color:var(--green)}.o{color:var(--orange)}.b{color:var(--blue)}
+input{background:#050505;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px;width:100%;font-size:.9rem}
+input.num{width:130px}
+input.amt{width:120px}
+.bar{height:10px;background:#1f1f1f;border-radius:5px;overflow:hidden;margin-top:8px}
+.bar span{display:block;height:100%}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted);margin:8px 0 16px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.fam{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+.fam h4{margin:0 0 6px;font-size:1rem}
+.fam ul{margin:0;padding-left:18px;color:var(--muted);font-size:.9rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.note{color:var(--orange);font-size:.85rem;margin:8px 0}
+.hidden{display:none}
+textarea{width:100%;min-height:200px;background:#050505;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px;font-family:monospace;font-size:.8rem}
+.tl{border-left:2px solid var(--line);padding-left:14px}
+.tl div{margin-bottom:12px}
+.tl b{display:block}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Diveagar Trip 2026</h1>
+    <div class="sub">13 to 16 November 2026 &middot; 23 people &middot; 7 families</div>
+  </div>
+  <div class="row">
+    <span class="badge" id="roleBadge">Read only</span>
+    <button id="loginBtn" onclick="toggleLogin()">Admin login</button>
+  </div>
+</header>
+
+<nav id="nav"></nav>
+<div id="content"></div>
+
+<script>
+/* ============ CONFIG ============ */
+const STORE_KEY = 'diveagar-trip-2026';
+
+// Only these two people can get admin access.
+// Each hash is the SHA-256 of that person's passcode. Generate one in the browser console:
+// (async()=>{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('YOUR_PASSCODE'));console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''))})()
+// Paste the printed value below. Passcodes are never stored in this file.
+const ADMIN_HASHES = {
+  Ameya:  'REPLACE_WITH_SHA256_FOR_AMEYA',
+  Prachi: 'REPLACE_WITH_SHA256_FOR_PRACHI'
+};
+
+const DEFAULT_DATA = {
+  trip: { farmTotal: 115000 },
+  families: [
+    { name: 'Medhi',    members: ['Deven','Neha','Rama','Raghav'],     infants: 1, collected: 0 },
+    { name: 'Kulkarni', members: ['Ameya','Nikhila','Niya','Parnika'], infants: 1, collected: 0 },
+    { name: 'Katekar',  members: ['Pratik','Prachi','Sharvi'],         collected: 0 },
+    { name: 'Upasani',  members: ['Bhushan','Madhura','Riyansh'],      collected: 0 },
+    { name: 'Gogate',   members: ['Sagar','Aaravi','Arhat'],           collected: 0 },
+    { name: 'Pandare',  members: ['Sudhan','Gayatri','Pinak'],         collected: 0 },
+    { name: 'Marna',    members: ['Aniket','Mona','Asmi'],             collected: 0 }
+  ],
+  farmPayments: [ { date: '', note: 'Advance', amount: 40000 } ],
+  travelExpenses: [],
+  schedule: [
+    { when: '13 Nov, morning', what: 'Leave Pune' },
+    { when: '13 Nov, by 12 noon', what: 'Reach Diveagar' },
+    { when: '16 Nov, 12 noon', what: 'Leave Diveagar' },
+    { when: '16 Nov, 6 to 7 PM', what: 'Reach Pune' }
+  ]
+};
+
+/* ============ STATE ============ */
+let role = null;      // null = read only, 'admin' = editable
+let view = 'money';
+let data = load();
+
+function load() {
+  try {
+    const s = localStorage.getItem(STORE_KEY);
+    return s ? JSON.parse(s) : structuredClone(DEFAULT_DATA);
+  } catch (e) { return structuredClone(DEFAULT_DATA); }
+}
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) {}
+}
+
+/* ============ HELPERS ============ */
+const fmt = n => '\u20B9 ' + Number(n || 0).toLocaleString('en-IN');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sum = arr => arr.reduce((t, x) => t + (Number(x) || 0), 0);
+const headcount = () => sum(data.families.map(f => f.members.length));
+
+function payers() {
+  return sum(data.families.map(f => f.members.length - (f.infants || 0)));
+}
+
+function totals() {
+  const people = payers();
+  const total = Number(data.trip.farmTotal) || 0;
+  const paid = sum(data.farmPayments.map(p => p.amount));
+  const collected = sum(data.families.map(f => f.collected));
+  const travel = sum(data.families.map(f => f.expense)) + sum(data.travelExpenses.map(e => e.amount));
+  return {
+    total, paid, collected, travel,
+    due: Math.max(total - paid, 0),
+    perPerson: people ? total / people : 0,
+    people
+  };
+}
+
+async function sha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+/* ============ AUTH ============ */
+async function toggleLogin() {
+  if (role === 'admin') { role = null; render(); return; }
+  const name = (prompt('Enter your name (Ameya or Prachi):') || '').trim();
+  if (!Object.prototype.hasOwnProperty.call(ADMIN_HASHES, name)) {
+    alert('Only Ameya and Prachi have admin access.');
+    return;
+  }
+  if (ADMIN_HASHES[name].startsWith('REPLACE')) {
+    alert('Admin passcode not set yet. Add the hash for ' + name + ' in ADMIN_HASHES.');
+    return;
+  }
+  const pass = prompt('Passcode:');
+  if (!pass) return;
+  if (await sha256(pass) === ADMIN_HASHES[name]) { role = 'admin'; render(); }
+  else alert('Wrong passcode.');
+}
+
+/* ============ NAV ============ */
+function setView(v) { view = v; render(); }
+
+/* ============ ADMIN ACTIONS ============ */
+function setFamily(i, val) {
+  if (role !== 'admin') return;
+  data.families[i].collected = Number(val) || 0;
+  save(); render();
+}
+function setFamilyExpense(i, val) {
+  if (role !== 'admin') return;
+  data.families[i].expense = Number(val) || 0;
+  save(); render();
+}
+function setInfants(i, val) {
+  if (role !== 'admin') return;
+  const max = data.families[i].members.length;
+  data.families[i].infants = Math.min(Math.max(Number(val) || 0, 0), max);
+  save(); render();
+}
+function recordFarmPayment() {
+  if (role !== 'admin') return;
+  const amount = Number(document.getElementById('payAmt').value) || 0;
+  if (amount <= 0) { alert('Enter the amount paid.'); return; }
+  data.farmPayments.push({
+    date: document.getElementById('payDate').value.trim(),
+    note: document.getElementById('payNote').value.trim(),
+    amount
+  });
+  save(); render();
+}
+function setPayment(i, field, val) {
+  if (role !== 'admin') return;
+  data.farmPayments[i][field] = field === 'amount' ? (Number(val) || 0) : val;
+  save(); render();
+}
+function addPayment() {
+  if (role !== 'admin') return;
+  data.farmPayments.push({ date: '', note: '', amount: 0 });
+  save(); render();
+}
+function removePayment(i) {
+  if (role !== 'admin') return;
+  data.farmPayments.splice(i, 1);
+  save(); render();
+}
+function setExpense(i, field, val) {
+  if (role !== 'admin') return;
+  data.travelExpenses[i][field] = field === 'amount' ? (Number(val) || 0) : val;
+  save(); render();
+}
+function addExpense() {
+  if (role !== 'admin') return;
+  data.travelExpenses.push({ date: '', item: '', paidBy: '', amount: 0 });
+  save(); render();
+}
+function removeExpense(i) {
+  if (role !== 'admin') return;
+  data.travelExpenses.splice(i, 1);
+  save(); render();
+}
+function exportData() {
+  document.getElementById('dataBox').value = JSON.stringify(data, null, 2);
+}
+function importData() {
+  if (role !== 'admin') return;
+  try {
+    const parsed = JSON.parse(document.getElementById('dataBox').value);
+    data = parsed; save(); render(); alert('Data imported.');
+  } catch (e) { alert('That is not valid JSON.'); }
+}
+function resetLocal() {
+  if (role !== 'admin') return;
+  if (!confirm('Clear this browser\u2019s saved edits and go back to the built-in data?')) return;
+  data = structuredClone(DEFAULT_DATA); save(); render();
+}
+
+/* ============ CARDS ============ */
+function card(label, value, color) {
+  return `<div class="card"><div class="label">${label}</div><div class="val" style="color:${color}">${value}</div></div>`;
+}
+
+/* ============ VIEWS ============ */
+function moneyView(t, a) {
+  const pct = t.total ? Math.min(100, (t.paid / t.total) * 100) : 0;
+
+  return `
+  <div class="cards">
+    ${card('Farm house total', fmt(t.total), '#ffffff')}
+    ${card('Paid to farm house', fmt(t.paid), 'var(--green)')}
+    ${card('Due to farm house', fmt(t.due), 'var(--orange)')}
+    ${card('Travel expenses', fmt(t.travel), 'var(--blue)')}
+  </div>
+
+  <div class="legend">
+    <span><span class="dot" style="background:var(--green)"></span>Paid to farm house</span>
+    <span><span class="dot" style="background:var(--orange)"></span>Due to farm house</span>
+    <span><span class="dot" style="background:var(--blue)"></span>Travel expenses</span>
+  </div>
+
+  <div class="bar"><span style="width:${pct}%;background:var(--green)"></span></div>
+  <p class="sub">Paid: ${pct.toFixed(0)}% of farm house total. Per-adult share: ${fmt(t.perPerson)} across ${t.people} paying people (children under 4 are free).</p>
+
+  <h3 class="b">Expenses by family <span class="sub">(also added to travel expenses)</span></h3>
+  <table>
+    <tr><th>Family</th><th class="b">Expenses</th></tr>
+    ${data.families.map((f, i) => `
+      <tr>
+        <td>${esc(f.name)}</td>
+        <td class="b">${a
+          ? `<input class="amt" type="number" min="0" value="${f.expense || 0}" onchange="setFamilyExpense(${i}, this.value)">`
+          : fmt(f.expense)}</td>
+      </tr>`).join('')}
+    <tr><td><b>Total</b></td><td class="b"><b>${fmt(sum(data.families.map(f => f.expense)))}</b></td></tr>
+  </table>
+
+  <h3 class="o">Due to farm house: ${fmt(t.due)} <span class="sub">(orange)</span></h3>
+  <p class="sub">Farm house total ${fmt(t.total)} minus payments made ${fmt(t.paid)}.</p>
+
+  ${a ? `
+  <h3 class="g">Record payment to farm house <span class="sub">(adds to Paid, deducts from Due)</span></h3>
+  <div class="row">
+    <input class="amt" id="payAmt" type="number" min="0" placeholder="Amount">
+    <input id="payDate" type="text" placeholder="Date" style="width:150px">
+    <input id="payNote" type="text" placeholder="Note" style="width:200px">
+    <button onclick="recordFarmPayment()">Add payment</button>
+  </div>` : ''}
+  `;
+}
+
+function familiesView() {
+  return `<div class="grid">
+    ${data.families.map(f => `
+      <div class="fam">
+        <h4>${esc(f.name)} <span class="sub">(${f.members.length})</span></h4>
+        <ul>${f.members.map(m => `<li>${esc(m)}</li>`).join('')}</ul>
+      </div>`).join('')}
+  </div>
+  <p class="sub">${data.families.length} families, ${headcount()} people in total.</p>`;
+}
+
+function travelView(t, a) {
+  return `
+  <h3 class="b">Travel expenses <span class="sub">(blue)</span></h3>
+  <table>
+    <tr><th>Date</th><th>Item</th><th>Paid by</th><th class="b">Amount</th>${a ? '<th></th>' : ''}</tr>
+    ${data.families.filter(f => f.expense).map(f => `
+      <tr>
+        <td></td>
+        <td>Family expense (from Money tab)</td>
+        <td>${esc(f.name)}</td>
+        <td class="b">${fmt(f.expense)}</td>
+        ${a ? '<td></td>' : ''}
+      </tr>`).join('')}
+    ${data.travelExpenses.map((e, i) => `
+      <tr>
+        ${a ? `
+          <td><input type="text" value="${esc(e.date)}" onchange="setExpense(${i},'date',this.value)"></td>
+          <td><input type="text" value="${esc(e.item)}" onchange="setExpense(${i},'item',this.value)"></td>
+          <td><input type="text" value="${esc(e.paidBy)}" onchange="setExpense(${i},'paidBy',this.value)"></td>
+          <td><input class="amt" type="number" min="0" value="${e.amount}" onchange="setExpense(${i},'amount',this.value)"></td>
+          <td><button class="small" onclick="removeExpense(${i})">Remove</button></td>`
+        : `<td>${esc(e.date)}</td><td>${esc(e.item)}</td><td>${esc(e.paidBy)}</td><td class="b">${fmt(e.amount)}</td>`}
+      </tr>`).join('')}
+    <tr><td colspan="3"><b>Total travel</b></td><td class="b"><b>${fmt(t.travel)}</b></td>${a ? '<td></td>' : ''}</tr>
+  </table>
+  ${a ? '<div class="row"><button onclick="addExpense()">+ Add expense</button></div>' : ''}
+  `;
+}
+
+function infoView(t, a) {
+  return `
+  <h3>Schedule</h3>
+  <div class="tl">
+    ${data.schedule.map(s => `<div><b>${esc(s.when)}</b>${esc(s.what)}</div>`).join('')}
+  </div>
+
+  ${a ? `
+  <h3>Data backup (admin)</h3>
+  <p class="sub">Edits are saved in this browser only. To make them visible to everyone, export the data, paste it into DEFAULT_DATA in index.html, and push to GitHub.</p>
+  <div class="row">
+    <button onclick="exportData()">Export data</button>
+    <button onclick="importData()">Import data from box</button>
+    <button onclick="resetLocal()">Reset this browser</button>
+  </div>
+  <textarea id="dataBox" placeholder="Export puts the JSON here. Paste JSON here to import."></textarea>
+  ` : ''}
+  `;
+}
+
+/* ============ RENDER ============ */
+function render() {
+  const a = role === 'admin';
+  const t = totals();
+  document.getElementById('roleBadge').textContent = a ? 'Admin (can edit)' : 'Read only';
+  document.getElementById('loginBtn').textContent = a ? 'Log out' : 'Admin login';
+
+  const tabs = [['money','Money'], ['families','Families'], ['travel','Travel'], ['info','Trip info']];
+  document.getElementById('nav').innerHTML = tabs
+    .map(([k, l]) => `<button class="${view === k ? 'active' : ''}" onclick="setView('${k}')">${l}</button>`)
+    .join('');
+
+  const views = { money: moneyView, families: familiesView, travel: travelView, info: infoView };
+  document.getElementById('content').innerHTML = views[view](t, a);
+}
+
+render();
+</script>
+</body>
+</html>
