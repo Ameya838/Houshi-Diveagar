@@ -29,6 +29,7 @@ th{color:var(--muted);font-weight:500}
 input{background:#050505;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px;width:100%;font-size:.9rem}
 input.num{width:130px}
 input.amt{width:120px}
+select{background:#050505;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px;font-size:.9rem}
 .bar{height:10px;background:#1f1f1f;border-radius:5px;overflow:hidden;margin-top:8px}
 .bar span{display:block;height:100%}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted);margin:8px 0 16px}
@@ -318,7 +319,10 @@ function travelView(t, a) {
         ${a ? `
           <td><input type="text" value="${esc(e.date)}" onchange="setExpense(${i},'date',this.value)"></td>
           <td><input type="text" value="${esc(e.item)}" onchange="setExpense(${i},'item',this.value)"></td>
-          <td><input type="text" value="${esc(e.paidBy)}" onchange="setExpense(${i},'paidBy',this.value)"></td>
+          <td><select onchange="setExpense(${i},'paidBy',this.value)">
+            <option value="">Select family</option>
+            ${data.families.map(f => `<option value="${esc(f.name)}" ${f.name === e.paidBy ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}
+          </select></td>
           <td><input class="amt" type="number" min="0" value="${e.amount}" onchange="setExpense(${i},'amount',this.value)"></td>
           <td><button class="small" onclick="removeExpense(${i})">Remove</button></td>`
         : `<td>${esc(e.date)}</td><td>${esc(e.item)}</td><td>${esc(e.paidBy)}</td><td class="b">${fmt(e.amount)}</td>`}
