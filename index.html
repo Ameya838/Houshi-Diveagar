@@ -29,6 +29,7 @@ th{color:var(--muted);font-weight:500}
 input{background:#050505;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px;width:100%;font-size:.9rem}
 input.num{width:130px}
 input.amt{width:120px}
+select{background:#050505;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px;font-size:.9rem}
 .bar{height:10px;background:#1f1f1f;border-radius:5px;overflow:hidden;margin-top:8px}
 .bar span{display:block;height:100%}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted);margin:8px 0 16px}
@@ -116,6 +117,7 @@ const fmt = n => '\u20B9 ' + Number(n || 0).toLocaleString('en-IN');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sum = arr => arr.reduce((t, x) => t + (Number(x) || 0), 0);
 const headcount = () => sum(data.families.map(f => f.members.length));
+const familyExpense = name => sum(data.travelExpenses.filter(e => e.paidBy === name).map(e => e.amount));
 
 function payers() {
   return sum(data.families.map(f => f.members.length - (f.infants || 0)));
@@ -126,7 +128,7 @@ function totals() {
   const total = Number(data.trip.farmTotal) || 0;
   const paid = sum(data.farmPayments.map(p => p.amount));
   const collected = sum(data.families.map(f => f.collected));
-  const travel = sum(data.families.map(f => f.expense)) + sum(data.travelExpenses.map(e => e.amount));
+  const travel = sum(data.travelExpenses.map(e => e.amount));
   return {
     total, paid, collected, travel,
     due: Math.max(total - paid, 0),
@@ -262,17 +264,15 @@ function moneyView(t, a) {
   <div class="bar"><span style="width:${pct}%;background:var(--green)"></span></div>
   <p class="sub">Paid: ${pct.toFixed(0)}% of farm house total. Per-adult share: ${fmt(t.perPerson)} across ${t.people} paying people (children under 4 are free).</p>
 
-  <h3 class="b">Expenses by family <span class="sub">(also added to travel expenses)</span></h3>
+  <h3 class="b">Expenses by family <span class="sub">(from Travel tab)</span></h3>
   <table>
     <tr><th>Family</th><th class="b">Expenses</th></tr>
     ${data.families.map((f, i) => `
       <tr>
         <td>${esc(f.name)}</td>
-        <td class="b">${a
-          ? `<input class="amt" type="number" min="0" value="${f.expense || 0}" onchange="setFamilyExpense(${i}, this.value)">`
-          : fmt(f.expense)}</td>
+        <td class="b">${fmt(familyExpense(f.name))}</td>
       </tr>`).join('')}
-    <tr><td><b>Total</b></td><td class="b"><b>${fmt(sum(data.families.map(f => f.expense)))}</b></td></tr>
+      <tr><td><b>Total</b></td><td class="b"><b>${fmt(sum(data.families.map(f => familyExpense(f.name))))}</b></td></tr>
   </table>
 
   <h3 class="o">Due to farm house: ${fmt(t.due)} <span class="sub">(orange)</span></h3>
@@ -306,19 +306,15 @@ function travelView(t, a) {
   <table>
     <tr><th>Date</th><th>Item</th><th>Paid by</th><th class="b">Amount</th>${a ? '<th></th>' : ''}</tr>
     ${data.families.filter(f => f.expense).map(f => `
-      <tr>
-        <td></td>
-        <td>Family expense (from Money tab)</td>
-        <td>${esc(f.name)}</td>
-        <td class="b">${fmt(f.expense)}</td>
-        ${a ? '<td></td>' : ''}
-      </tr>`).join('')}
     ${data.travelExpenses.map((e, i) => `
       <tr>
         ${a ? `
           <td><input type="text" value="${esc(e.date)}" onchange="setExpense(${i},'date',this.value)"></td>
           <td><input type="text" value="${esc(e.item)}" onchange="setExpense(${i},'item',this.value)"></td>
-          <td><input type="text" value="${esc(e.paidBy)}" onchange="setExpense(${i},'paidBy',this.value)"></td>
+          <td><select onchange="setExpense(${i},'paidBy',this.value)">
+            <option value="">Select family</option>
+            ${data.families.map(f => `<option value="${esc(f.name)}" ${f.name === e.paidBy ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}
+          </select></td>
           <td><input class="amt" type="number" min="0" value="${e.amount}" onchange="setExpense(${i},'amount',this.value)"></td>
           <td><button class="small" onclick="removeExpense(${i})">Remove</button></td>`
         : `<td>${esc(e.date)}</td><td>${esc(e.item)}</td><td>${esc(e.paidBy)}</td><td class="b">${fmt(e.amount)}</td>`}
